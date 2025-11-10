@@ -2,9 +2,12 @@
 
 function make_cmd(){
     mkdir -p "$HOME/bin"
-    echo "export PATH=\"$HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
+    if ! grep -qF "$HOME/bin" "$HOME/.bashrc"; then
+        echo "export PATH=\"$HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
+    fi
     cp "$1" "$HOME/bin/$2"
     chmod 700 "$HOME/bin/$2"
+    echo "Command '$2' created at \$HOME/bin/$2"
 }
 
 case "$1" in
@@ -19,18 +22,42 @@ case "$1" in
         fi
         make_cmd "$2" "$3"
         ;;
+
     "--text"|"-t")
         if [ -z "$2" ]; then
             echo "Missing command name" >&2
             exit 1
         fi
-        text="$(cat)"
         temp_file=$(mktemp)
-        echo "$text" > "$temp_file"
+        cat > "$temp_file"
         make_cmd "$temp_file" "$2"
         rm "$temp_file"
         ;;
+
+    "--clear"|"-c")
+        if [ -f "$HOME/bin/$2" ]; then
+            rm -f "$HOME/bin/$2"
+            echo "Command $2 removed."
+        elif [ "$2" = "*" ]; then 
+            rm -f "$HOME/bin/$2"
+            echo "All custom commands removed"
+        else
+            echo "Error: command '$2' not found in $HOME/bin.">&2
+            exit 1
+        fi        
+        ;;
+
     "--help"|"-h"|*)
-        echo -e "usage: tmpcmdmk [option] [file/text] name\n\toptions:\n\t\t--file, -f\texpects a file\n\t\t--text, -t\treads user input until EOF\n\t\t--help, -h\tprints this message\n"
+        echo -e "tmpcmdmk — quick command maker\n"
+        echo -e "Usage:"
+        echo -e "  tmpcmdmk --file <file> <name>\tCreate a command from an existing file"
+        echo -e "  tmpcmdmk --text <name>\t\tRead text from stdin until EOF and create a command"
+        echo -e "  tmpcmdmk --clear <name>\t\tRemove a specific command from \$HOME/bin"
+        echo -e "  tmpcmdmk --clear *\t\t\tRemove all commands from \$HOME/bin"
+        echo -e "  tmpcmdmk --help\t\t\tShow this help message"
+        echo -e "\nNotes:"
+        echo -e "  - Commands are stored in \$HOME/bin and made executable (chmod 700)."
+        echo -e "  - The PATH is updated automatically if needed."
+        echo -e "  - You must 'source ~/.bashrc' or open a new terminal to use new commands."
         ;;
 esac
