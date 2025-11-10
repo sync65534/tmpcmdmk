@@ -1,0 +1,36 @@
+#!/bin/bash
+
+function make_cmd(){
+    mkdir -p "$HOME/bin"
+    echo "export PATH=\"$HOME/bin:\$PATH\"" >> "$HOME/.bashrc"
+    cp "$1" "$HOME/bin/$2"
+    chmod 700 "$HOME/bin/$2"
+}
+
+case "$1" in
+    "--file"|"-f")
+        if [ ! -f "$2" ]; then
+            echo "Invalid file path" >&2
+            exit 1
+        fi
+        if [ -z "$3" ]; then
+            echo "Missing command name" >&2
+            exit 1
+        fi
+        make_cmd "$2" "$3"
+        ;;
+    "--text"|"-t")
+        if [ -z "$2" ]; then
+            echo "Missing command name" >&2
+            exit 1
+        fi
+        text="$(cat)"
+        temp_file=$(mktemp)
+        echo "$text" > "$temp_file"
+        make_cmd "$temp_file" "$2"
+        rm "$temp_file"
+        ;;
+    "--help"|"-h"|*)
+        echo -e "usage: tmpcmdmk [option] [file/text] name\n\toptions:\n\t\t--file, -f\texpects a file\n\t\t--text, -t\treads user input until EOF\n\t\t--help, -h\tprints this message\n"
+        ;;
+esac
